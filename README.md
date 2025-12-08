@@ -23,9 +23,10 @@
 2. Copy the `NetworkShareTools` folder to one of your PowerShell module paths:
    ```powershell
    $env:PSModulePath
-3. Import-Module NetworkShareTools
+3. ```powershell
+   Import-Module NetworkShareTools
 
-##Usage
+## Usage
 
 Get-NetworkShareAccessReport `
     -NetworkShare "\\Server\Share" `
@@ -36,7 +37,9 @@ Get-NetworkShareAccessReport `
 <img width="446" height="101" alt="image" src="https://github.com/user-attachments/assets/5c91a786-4839-4e96-89d9-a6f699b243ef" />
 
 
-Output
+---
+
+## Output
 
 Detailed Report (CSV):
 
@@ -49,20 +52,30 @@ Columns: Folder, InaccessibleCount
 
 
 
+---
 
-Requirements
+
+## Requirements
 
 PowerShell 7.0 or later
+
 Permissions to access the network share
 
 
-Roadmap
+---
+
+## Roadmap
 
  Add email notifications on completion
+ 
  Add parameter validation
+ 
  Add logging to Event Viewer
+ 
  Add option to include successful access logs
 
+
+---
 
 License
 This project is licensed under the MIT License.
