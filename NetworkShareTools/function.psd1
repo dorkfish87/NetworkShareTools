@@ -3,7 +3,7 @@
     RootModule = 'NetworkShareTools.psm1'
 
     # Version number of this module
-    ModuleVersion = '1.0.3'
+    ModuleVersion = '1.0.4'
 
     # ID used to uniquely identify this module
     GUID = '9c663cc5-8bd4-4d4e-95b0-edef32ed4d0c'  # Use New-Guid to generate
