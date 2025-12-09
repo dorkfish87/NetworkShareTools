@@ -18,7 +18,7 @@
     Description = 'Provides tools to scan network shares for inaccessible files and folders, with detailed reporting.'
 
     # Minimum version of the PowerShell engine required by this module
-    PowerShellVersion = '7.0'
+    PowerShellVersion = '5.0'
 
     # Functions to export from this module
     FunctionsToExport = @('Get-NetworkShareAccessReport')
