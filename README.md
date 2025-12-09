@@ -24,19 +24,21 @@
    ```powershell
    .\NetworkShareTools-Manager.ps1 -Action Install
    ```
-OR 
+3. ```powershell
+   Import-Module NetworkShareTools
+   ```
+
+---
+## Uninstall
    ```powershell
    .\NetworkShareTools-Manager.ps1 -Action Uninstall
    ```
 
 ## Usage
 
-Get-NetworkShareAccessReport `
-    -NetworkShare "\\Server\Share" `
-    -OutputCSV "C:\AccessErrors.csv" `
-    -SummaryCSV "C:\FolderSummary.csv" `
-    -ThrottleLimit 15
-
+```
+Get-NetworkShareAccessReport -NetworkShare "\\Server\Share" -OutputCSV "C:\AccessErrors.csv" -SummaryCSV "C:\FolderSummary.csv" -ThrottleLimit 15
+```
 <img width="446" height="101" alt="image" src="https://github.com/user-attachments/assets/5c91a786-4839-4e96-89d9-a6f699b243ef" />
 
 
