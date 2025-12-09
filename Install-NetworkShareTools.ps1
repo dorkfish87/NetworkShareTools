@@ -1,75 +1,56 @@
-# Hardcoded GitHub repository URL
+# Install-NetworkShareTools.ps1
 $GitHubRepoUrl = "https://github.com/dorkfish87/NetworkShareTools"
 $ModuleName = "NetworkShareTools"
-
-# Target module path (system-wide)
 $targetPath = "C:\Program Files\WindowsPowerShell\Modules\$ModuleName"
 
-Write-Host "Installing module '$ModuleName' from GitHub to $targetPath..."
-
-# Ensure script runs as Administrator
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Warning "You must run this script as Administrator to install to Program Files."
-    exit
+Write-Host "Checking installed version..."
+$installedVersion = $null
+$manifestPath = Join-Path $targetPath "$ModuleName.psd1"
+if (Test-Path $manifestPath) {
+    $installedVersion = (Import-PowerShellDataFile -Path $manifestPath).ModuleVersion
+    Write-Host "Installed version: $installedVersion"
 }
 
-# Create target directory if it doesn't exist
-if (-not (Test-Path $targetPath)) {
-    New-Item -ItemType Directory -Path $targetPath -Force | Out-Null
-}
-
-# Download ZIP from GitHub
+Write-Host "Fetching latest version from GitHub..."
 $tempZip = Join-Path $env:TEMP "$ModuleName.zip"
 $downloadUrl = "$GitHubRepoUrl/archive/refs/heads/main.zip"
-
-Write-Host "Downloading module from $downloadUrl..."
 Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip
 
-# Extract ZIP
-Write-Host "Extracting module files..."
 Expand-Archive -Path $tempZip -DestinationPath $env:TEMP -Force
-
-# Find extracted folder (usually ends with '-main')
 $extractedFolder = Get-ChildItem -Path $env:TEMP -Directory | Where-Object { $_.Name -like "$ModuleName-*" } | Select-Object -First 1
 
-if (-not $extractedFolder) {
-    Write-Warning "Could not find extracted module folder. Check GitHub URL."
+# Check version in GitHub manifest
+$githubManifest = Get-ChildItem -Path $extractedFolder.FullName -Recurse -Filter "*.psd1" | Select-Object -First 1
+$latestVersion = if ($githubManifest) { (Import-PowerShellDataFile -Path $githubManifest.FullName).ModuleVersion } else { "1.0.0" }
+Write-Host "Latest version on GitHub: $latestVersion"
+
+# Compare versions
+if ($installedVersion -and ([version]$installedVersion -ge [version]$latestVersion)) {
+    Write-Host "Module is up-to-date. No installation needed."
+    Remove-Item $tempZip -Force
+    Remove-Item $extractedFolder.FullName -Recurse -Force
     exit
 }
 
-# Search for .psm1 file recursively
+Write-Host "Installing/updating module to version $latestVersion..."
+if (-not (Test-Path $targetPath)) { New-Item -ItemType Directory -Path $targetPath -Force | Out-Null }
+
+# Copy .psm1 and .psd1
 $psm1File = Get-ChildItem -Path $extractedFolder.FullName -Recurse -Filter "*.psm1" | Select-Object -First 1
-if (-not $psm1File) {
-    Write-Warning "Module file (.psm1) not found anywhere in the repo. Installation cannot proceed."
-    exit
-}
-
-# Copy and rename .psm1 to match module name
 Copy-Item -Path $psm1File.FullName -Destination (Join-Path $targetPath "$ModuleName.psm1") -Force
 
-# Check for .psd1 file
-$psd1File = Get-ChildItem -Path $extractedFolder.FullName -Recurse -Filter "*.psd1" | Select-Object -First 1
-if ($psd1File) {
-    Copy-Item -Path $psd1File.FullName -Destination (Join-Path $targetPath "$ModuleName.psd1") -Force
+if ($githubManifest) {
+    Copy-Item -Path $githubManifest.FullName -Destination (Join-Path $targetPath "$ModuleName.psd1") -Force
 } else {
-    Write-Host "Creating module manifest (.psd1)..."
     New-ModuleManifest -Path (Join-Path $targetPath "$ModuleName.psd1") `
         -RootModule "$ModuleName.psm1" `
-        -ModuleVersion "1.0.0" `
+        -ModuleVersion $latestVersion `
         -Author "Your Name" `
         -Description "NetworkShareTools module for scanning network shares and reporting inaccessible files."
 }
 
-# Clean up temp files
+# Cleanup
 Remove-Item $tempZip -Force
 Remove-Item $extractedFolder.FullName -Recurse -Force
 
-# Validate installation
-Write-Host "Validating module installation..."
-if (Test-Path (Join-Path $targetPath "$ModuleName.psm1")) {
-    Write-Host "`nModule '$ModuleName' installed successfully!"
-    Write-Host "You can now run:"
-    Write-Host "Import-Module $ModuleName`n"
-} else {
-    Write-Warning "Module installation failed. .psm1 file missing in final location."
-}
+Write-Host "Module installed/updated successfully!"
