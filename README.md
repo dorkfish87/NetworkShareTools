@@ -22,9 +22,12 @@
 1. Clone or download this repository.
 2. Run the following powershell.
    ```powershell
-   .\Install-NetworkShareTools.ps1
-4. ```powershell
-   Import-Module NetworkShareTools
+   .\NetworkShareTools-Manager.ps1 -Action Install
+   ```
+OR 
+   ```powershell
+   .\NetworkShareTools-Manager.ps1 -Action Uninstall
+   ```
 
 ## Usage
 
