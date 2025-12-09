@@ -20,10 +20,10 @@
 
 ## Installation
 1. Clone or download this repository.
-2. Copy the `NetworkShareTools` folder to one of your PowerShell module paths:
-   ```powershell
-   $env:PSModulePath
-3. ```powershell
+2. Run the following powershell.
+   ````powershell
+.\Install-NetworkShareTools.ps1
+4. ```powershell
    Import-Module NetworkShareTools
 
 ## Usage
