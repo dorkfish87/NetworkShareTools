@@ -22,7 +22,7 @@ function Get-NetworkShareAccessReport {
     $count = 0
 
     if ($PSVersionTable.PSVersion.Major -ge 7) {
-        # Use dynamic script block for PowerShell 7 parallel logic
+        # PowerShell 7+ Parallel block
         $parallelScript = {
             param($items,$OutputCSV,$SummaryCSV,$ThrottleLimit,$total)
 
@@ -43,8 +43,9 @@ function Get-NetworkShareAccessReport {
                     $owner = "Unknown"
                     $pathLength = $_.FullName.Length
                     $warning = if ($pathLength -gt 260) { "Path exceeds 260 characters" } else { "" }
+                    $longPathFlag = if ($pathLength -gt 260) {1} else {0}
 
-                    if ($pathLength -gt 260) {
+                    if ($longPathFlag -eq 1) {
                         Write-Host "WARNING: Long path detected ($pathLength chars): $($_.FullName)" -ForegroundColor Yellow
                     }
 
@@ -52,8 +53,8 @@ function Get-NetworkShareAccessReport {
 
                     $folder = Split-Path $_.FullName -Parent
                     $folderSummary.AddOrUpdate($folder,
-                        @{Inaccessible=1;LongPaths=(if ($pathLength -gt 260){1}else{0})},
-                        { param($key,$old) @{Inaccessible=$old.Inaccessible+1;LongPaths=$old.LongPaths+(if ($pathLength -gt 260){1}else{0})} })
+                        @{Inaccessible=1;LongPaths=$longPathFlag},
+                        { param($key,$old) @{Inaccessible=$old.Inaccessible+1;LongPaths=$old.LongPaths+$longPathFlag} })
                 }
 
                 [System.Threading.Interlocked]::Increment([ref]$using:count) | Out-Null
@@ -86,8 +87,9 @@ function Get-NetworkShareAccessReport {
                 $owner = "Unknown"
                 $pathLength = $item.FullName.Length
                 $warning = if ($pathLength -gt 260) { "Path exceeds 260 characters" } else { "" }
+                $longPathFlag = if ($pathLength -gt 260) {1} else {0}
 
-                if ($pathLength -gt 260) {
+                if ($longPathFlag -eq 1) {
                     Write-Host "WARNING: Long path detected ($pathLength chars): $($item.FullName)" -ForegroundColor Yellow
                 }
 
@@ -96,9 +98,9 @@ function Get-NetworkShareAccessReport {
                 $folder = Split-Path $item.FullName -Parent
                 if ($folderSummary.ContainsKey($folder)) {
                     $folderSummary[$folder].Inaccessible++
-                    if ($pathLength -gt 260) { $folderSummary[$folder].LongPaths++ }
+                    $folderSummary[$folder].LongPaths += $longPathFlag
                 } else {
-                    $folderSummary[$folder] = [PSCustomObject]@{ Inaccessible = 1; LongPaths = (if ($pathLength -gt 260) {1} else {0}) }
+                    $folderSummary[$folder] = [PSCustomObject]@{ Inaccessible = 1; LongPaths = $longPathFlag }
                 }
             }
 
