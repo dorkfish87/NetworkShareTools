@@ -21,8 +21,8 @@
 ## Installation
 1. Clone or download this repository.
 2. Run the following powershell.
-   ````powershell
-.\Install-NetworkShareTools.ps1
+   ```powershell
+   .\Install-NetworkShareTools.ps1
 4. ```powershell
    Import-Module NetworkShareTools
 
@@ -57,7 +57,7 @@ Columns: Folder, InaccessibleCount
 
 ## Requirements
 
-PowerShell 7.0 or later
+***PowerShell 7.0 or later***
 
 Permissions to access the network share
 
