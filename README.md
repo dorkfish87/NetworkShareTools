@@ -60,7 +60,7 @@ Columns: Folder, InaccessibleCount
 
 ## Requirements
 
-***PowerShell 7.0 or later***
+***PowerShell 5.0 or later***
 
 Permissions to access the network share
 
