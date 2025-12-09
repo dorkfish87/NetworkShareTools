@@ -17,57 +17,60 @@ function Get-NetworkShareAccessReport {
     "Path,PathLength,Warning,ErrorMessage,Timestamp,Size(Bytes),Owner" | Out-File $OutputCSV
     "Folder,InaccessibleCount,LongPathCount" | Out-File $SummaryCSV
 
-    # Get all items
     $items = Get-ChildItem -Path $NetworkShare -Recurse -ErrorAction SilentlyContinue
     $total = $items.Count
     $count = 0
 
     if ($PSVersionTable.PSVersion.Major -ge 7) {
-        # PowerShell 7+ (Parallel)
-        $folderSummary = [System.Collections.Concurrent.ConcurrentDictionary[string,[System.Tuple[int,int]]]::new()]
+        # Use dynamic script block for PowerShell 7 parallel logic
+        $parallelScript = {
+            param($items,$OutputCSV,$SummaryCSV,$ThrottleLimit,$total)
 
-        $items | ForEach-Object -Parallel {
-            param($OutputCSV, $folderSummary, $total)
+            $folderSummary = [System.Collections.Concurrent.ConcurrentDictionary[string,object]]::new()
 
-            try {
-                $obj = Get-Item $_.FullName
-                $size = if ($obj.PSIsContainer) { 0 } else { $obj.Length }
-                $owner = (Get-Acl $obj.FullName).Owner
-            }
-            catch {
-                $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-                $errorMsg = $_.Exception.Message.Replace("`n"," ").Replace("`r"," ")
-                $size = if ($_.PSIsContainer) { 0 } else { $_.Length }
-                $owner = "Unknown"
-                $pathLength = $_.FullName.Length
-                $warning = if ($pathLength -gt 260) { "Path exceeds 260 characters" } else { "" }
+            $items | ForEach-Object -Parallel {
+                param($OutputCSV,$folderSummary,$total)
 
-                # Color-coded warning in console
-                if ($pathLength -gt 260) {
-                    Write-Host "WARNING: Long path detected ($pathLength chars): $($_.FullName)" -ForegroundColor Yellow
+                try {
+                    $obj = Get-Item $_.FullName
+                    $size = if ($obj.PSIsContainer) { 0 } else { $obj.Length }
+                    $owner = (Get-Acl $obj.FullName).Owner
+                }
+                catch {
+                    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+                    $errorMsg = $_.Exception.Message.Replace("`n"," ").Replace("`r"," ")
+                    $size = if ($_.PSIsContainer) { 0 } else { $_.Length }
+                    $owner = "Unknown"
+                    $pathLength = $_.FullName.Length
+                    $warning = if ($pathLength -gt 260) { "Path exceeds 260 characters" } else { "" }
+
+                    if ($pathLength -gt 260) {
+                        Write-Host "WARNING: Long path detected ($pathLength chars): $($_.FullName)" -ForegroundColor Yellow
+                    }
+
+                    "$($_.FullName),$pathLength,$warning,$errorMsg,$timestamp,$size,$owner" | Out-File -Append -FilePath $OutputCSV
+
+                    $folder = Split-Path $_.FullName -Parent
+                    $folderSummary.AddOrUpdate($folder,
+                        @{Inaccessible=1;LongPaths=(if ($pathLength -gt 260){1}else{0})},
+                        { param($key,$old) @{Inaccessible=$old.Inaccessible+1;LongPaths=$old.LongPaths+(if ($pathLength -gt 260){1}else{0})} })
                 }
 
-                "$($_.FullName),$pathLength,$warning,$errorMsg,$timestamp,$size,$owner" | Out-File -Append -FilePath $OutputCSV
+                [System.Threading.Interlocked]::Increment([ref]$using:count) | Out-Null
+                $percent = [math]::Round(($using:count / $total) * 100, 2)
+                Write-Progress -Activity "Scanning Network Share" -Status "$percent% Complete" -PercentComplete $percent
 
-                $folder = Split-Path $_.FullName -Parent
-                $folderSummary.AddOrUpdate($folder,
-                    [System.Tuple]::Create(1, if ($pathLength -gt 260) {1} else {0}),
-                    { param($key,$old) [System.Tuple]::Create($old.Item1 + 1, $old.Item2 + (if ($pathLength -gt 260) {1} else {0})) })
+            } -ArgumentList $OutputCSV,$folderSummary,$total -ThrottleLimit $ThrottleLimit
+
+            $folderSummary.GetEnumerator() | ForEach-Object {
+                "$($_.Key),$($_.Value.Inaccessible),$($_.Value.LongPaths)" | Out-File -Append -FilePath $SummaryCSV
             }
-
-            [System.Threading.Interlocked]::Increment([ref]$using:count) | Out-Null
-            $percent = [math]::Round(($using:count / $total) * 100, 2)
-            Write-Progress -Activity "Scanning Network Share" -Status "$percent% Complete" -PercentComplete $percent
-
-        } -ArgumentList $OutputCSV, $folderSummary, $total -ThrottleLimit $ThrottleLimit
-
-        # Export folder summary
-        $folderSummary.GetEnumerator() | ForEach-Object {
-            "$($_.Key),$($_.Value.Item1),$($_.Value.Item2)" | Out-File -Append -FilePath $SummaryCSV
         }
+
+        & $parallelScript $items $OutputCSV $SummaryCSV $ThrottleLimit $total
     }
     else {
-        # Windows PowerShell 5.1 (Sequential)
+        # Sequential logic for PowerShell 5.1
         $folderSummary = @{}
 
         foreach ($item in $items) {
@@ -84,7 +87,6 @@ function Get-NetworkShareAccessReport {
                 $pathLength = $item.FullName.Length
                 $warning = if ($pathLength -gt 260) { "Path exceeds 260 characters" } else { "" }
 
-                # Color-coded warning in console
                 if ($pathLength -gt 260) {
                     Write-Host "WARNING: Long path detected ($pathLength chars): $($item.FullName)" -ForegroundColor Yellow
                 }
@@ -105,7 +107,6 @@ function Get-NetworkShareAccessReport {
             Write-Progress -Activity "Scanning Network Share" -Status "$percent% Complete" -PercentComplete $percent
         }
 
-        # Export folder summary
         foreach ($folder in $folderSummary.Keys) {
             "$folder,$($folderSummary[$folder].Inaccessible),$($folderSummary[$folder].LongPaths)" | Out-File -Append -FilePath $SummaryCSV
         }
