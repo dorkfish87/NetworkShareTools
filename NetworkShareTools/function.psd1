@@ -12,7 +12,7 @@
     Author = 'Cody Frazier'
 
     # Copyright statement for this module
-    Copyright = '(c) 2025 Your Company. All rights reserved.'
+    Copyright = '(c) 2025 Foxtrot Computing. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description = 'Provides tools to scan network shares for inaccessible files and folders, with detailed reporting.'
