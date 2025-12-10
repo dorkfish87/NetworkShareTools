@@ -32,10 +32,14 @@ function Get-NetworkShareAccessReport {
                 param($OutputCSV,$folderSummary,$total)
 
                 try {
-                    $obj = Get-Item $_.FullName
-                    $size = if ($obj.PSIsContainer) { 0 } else { $obj.Length }
-                    $owner = (Get-Acl $obj.FullName).Owner
-                }
+    $obj = Get-Item $_.FullName -ErrorAction SilentlyContinue
+    if ($obj) {
+        $size = if ($obj.PSIsContainer) { 0 } else { $obj.Length }
+        $owner = (Get-Acl $obj.FullName -ErrorAction SilentlyContinue).Owner
+    } else {
+        throw "Access denied or item not found"
+    }
+}
                 catch {
                     $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
                     $errorMsg = $_.Exception.Message.Replace("`n"," ").Replace("`r"," ")
@@ -76,10 +80,14 @@ function Get-NetworkShareAccessReport {
 
         foreach ($item in $items) {
             try {
-                $obj = Get-Item $item.FullName
-                $size = if ($obj.PSIsContainer) { 0 } else { $obj.Length }
-                $owner = (Get-Acl $obj.FullName).Owner
-            }
+    $obj = Get-Item $_.FullName -ErrorAction SilentlyContinue
+    if ($obj) {
+        $size = if ($obj.PSIsContainer) { 0 } else { $obj.Length }
+        $owner = (Get-Acl $obj.FullName -ErrorAction SilentlyContinue).Owner
+    } else {
+        throw "Access denied or item not found"
+    }
+}
             catch {
                 $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
                 $errorMsg = $_.Exception.Message.Replace("`n"," ").Replace("`r"," ")
